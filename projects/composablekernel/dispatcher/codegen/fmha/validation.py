@@ -895,6 +895,10 @@ def validate_config(
             result.add_error("batch_prefill page_size must be a positive power of two")
         if sig.get("mode", "batch") != "group":
             result.add_error("batch_prefill requires group mode")
+        # The batch prefill kernel never reads kSkipMinSeqlenQ, so codegen
+        # emits false there; a true key would name a kernel that does not skip.
+        if sig.get("skip_min_seqlen_q", False):
+            result.add_error("batch_prefill does not support skip_min_seqlen_q")
         if pipeline not in {"qr_async", "batch_prefill_gfx11"}:
             result.add_error(
                 "batch_prefill currently uses qr_async or batch_prefill_gfx11 pipeline"
