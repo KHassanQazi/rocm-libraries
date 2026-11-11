@@ -205,7 +205,10 @@ class TestFmhaCodegen(unittest.TestCase):
             )
 
     def _batch_prefill_traits_args(
-        self, sink=False, template="TileFmhaBatchPrefillTraits<"
+        self,
+        sink=False,
+        template="TileFmhaBatchPrefillTraits<",
+        skip_min_seqlen_q=False,
     ):
         config = sample_config(
             arch="gfx950",
@@ -217,6 +220,7 @@ class TestFmhaCodegen(unittest.TestCase):
                 "kv_memory_layout": "linear",
                 "kv_lookup_table": "vllm",
                 "sink": sink,
+                "skip_min_seqlen_q": skip_min_seqlen_q,
             },
             algorithm={"pipeline": "qr_async", "tile": [128, 128, 32, 128, 32, 128]},
         )
@@ -304,6 +308,18 @@ class TestFmhaCodegen(unittest.TestCase):
             self.assertEqual(args[23], "true" if sink else "false", args)
             seen[sink] = args[23]
         self.assertNotEqual(seen[False], seen[True], seen)
+
+    def test_batch_prefill_skip_min_seqlen_q_slot_tracks_the_signature(self):
+        """kSkipMinSeqlenQ must follow its input in both traits lists."""
+        for template, slot in (
+            ("TileFmhaBatchPrefillTraits<", 11),
+            ("fmha_fwd_batch_prefill_traits_<", 22),
+        ):
+            for skip in (False, True):
+                _, args = self._batch_prefill_traits_args(
+                    template=template, skip_min_seqlen_q=skip
+                )
+                self.assertEqual(args[slot], "true" if skip else "false", args)
 
     def test_receipt_aliases_match_profiles(self):
         flash = sample_config(signature={"bias": "alibi"})
