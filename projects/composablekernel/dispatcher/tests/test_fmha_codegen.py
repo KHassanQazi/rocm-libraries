@@ -158,6 +158,21 @@ class TestFmhaCodegen(unittest.TestCase):
         self.assertFalse(result.valid)
         self.assertTrue(any("group mode" in error for error in result.errors))
 
+    def test_batch_prefill_rejects_skip_min_seqlen_q(self):
+        signature = {
+            "family": "batch_prefill",
+            "mode": "group",
+            "paged_kv": True,
+            "page_size": 16,
+        }
+        config = sample_config(signature=signature, algorithm={"pipeline": "qr_async"})
+        self.assertTrue(validate_config(config).valid)
+
+        config["signature"]["skip_min_seqlen_q"] = True
+        result = validate_config(config)
+        self.assertFalse(result.valid)
+        self.assertTrue(any("skip_min_seqlen_q" in error for error in result.errors))
+
     def test_gfx1100_batch_prefill_codegen_emits_gfx11_policy(self):
         config = sample_config(
             arch="gfx1100",
